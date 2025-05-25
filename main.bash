@@ -6,18 +6,34 @@
 CONFIG=./dns_servers.conf
 
 get_dns_servers() {
-    local dns_servers=()
-    local counter=0
-    while IFS= read -r line; do
+    local -n dns_ref=$1  # associative array to hold provider -> DNS lines
+    local provider
+    local dns_entry
 
-        # Skip empty lines and comments
-        [[ -z "$line" || "$line" =~ ^# ]] && continue # Only non-empty, non-comment lines will be processed
-        
-        # Add the DNS server to the array
-        dns_servers+=("$counter" "$line")
-        ((counter++))
-    done < "$CONFIG"
-    echo "${dns_servers[@]}"
+    while IFS= read -r line || [ -n "$line" ]; do
+         # Skip empty lines and comments
+        [[ -z "$line" || "$line" =~ ^# ]] && continue
+
+        # If line ends with ":", it's a provider name
+        if [[ "$line" =~ :$ ]]; then
+            provider="${line%:}"  # remove the colon
+            dns_ref["$provider"]=""
+        elif [[ "$line" =~ ^nameserver[0-9]+= ]]; then
+            dns_entry="${line#*=}"
+            dns_ref["$provider"]+="$dns_entry"$'\n'
+        fi
+    done < $CONFIG    
+}
+
+show_dns_servers() {
+    local -n dns_ref=$1
+    local index=1
+    echo "Available DNS servers:"
+    for provider in "${!dns_ref[@]}"; do
+        echo "$index) $provider:"
+        echo -e "${dns_ref[$provider]}"
+        ((index++))
+    done
 }
 
 # Check if the user has privileges to change the DNS server
@@ -32,6 +48,9 @@ if [ ! -f $CONFIG ]; then
   echo "Configuration file $CONFIG not found."
   exit 1
 fi
+
+declare -A dns_map
+get_dns_servers dns_map
 
 break_flag=0
 user_choice_task=0
@@ -52,6 +71,7 @@ while [ $break_flag -eq 0 ]; do
             ;;
         2)
             # Show available DNS servers
+            show_dns_servers dns_map
             ;;
         3)
             # Add a new DNS server
