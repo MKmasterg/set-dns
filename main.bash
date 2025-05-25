@@ -49,16 +49,19 @@ while [ $break_flag -eq 0 ]; do
     case $user_choice_task in
         1)
             # Change DNS server
-        
+            ;;
         2)
             # Show available DNS servers
-            
+            ;;
         3)
             # Add a new DNS server
+            ;;
         4)
             # Remove a DNS server
+            ;;
         5)
             # Restore default DNS server
+            ;;
         6)
             # Exit the script
             echo "Exiting..."
@@ -67,5 +70,7 @@ while [ $break_flag -eq 0 ]; do
         *)
             echo "Invalid choice. Please try again."
             ;;
+    esac
+done
 
 
