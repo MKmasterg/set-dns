@@ -84,6 +84,7 @@ while [ $break_flag -eq 0 ]; do
     echo "5. restore default DNS server"
     echo "6. Exit"
     read -p "Enter your choice (1-6): " user_choice_task
+    clear
     case $user_choice_task in
         1)
             # Change DNS server
