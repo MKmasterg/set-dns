@@ -36,6 +36,24 @@ show_dns_servers() {
     done
 }
 
+change_dns_server() {
+    local nameserver1="$1"
+    local nameserver2="$2"
+    local resolv_conf="/etc/resolv.conf"
+    
+    # Validate the dns servers
+    if ! [[ "$nameserver1" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || ! [[ "$nameserver2" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "Invalid DNS server format. Please use the format x.x.x.x"
+        return 1
+    fi
+
+    # Write the new DNS servers to /etc/resolv.conf
+    {
+        echo "nameserver $nameserver1"
+        echo "nameserver $nameserver2"
+    } >| "$resolv_conf"
+}
+
 # Check if the user has privileges to change the DNS server
 if (( $EUID != 0 )); then
   echo "You must be root to change the DNS server."
@@ -54,6 +72,7 @@ get_dns_servers dns_map
 
 break_flag=0
 user_choice_task=0
+dns_choice=0
 
 # Asks the user to select a choice to perform a task
 while [ $break_flag -eq 0 ]; do
@@ -68,6 +87,35 @@ while [ $break_flag -eq 0 ]; do
     case $user_choice_task in
         1)
             # Change DNS server
+            echo "Please select a DNS server to change to:"
+            show_dns_servers dns_map
+            read -p "Enter the number of the DNS server you want to use: " dns_choice
+            # Validate the choice
+            if ! [[ "$dns_choice" =~ ^[0-9]+$ ]] || [ "$dns_choice" -lt 1 ] || [ "$dns_choice" -gt "${#dns_map[@]}" ]; then
+                echo "Invalid choice. Please try again."
+                continue
+            fi
+            # Get the selected DNS server
+            # Keys are providers, values are DNS entries so i need to get the key by iteration
+            index=1
+            for provider in "${!dns_map[@]}"; do
+                if [ "$index" -eq "$dns_choice" ]; then
+                    selected_provider="$provider"
+                    break
+                fi
+                ((index++))
+            done
+
+            # Get the DNS entries for the selected provider
+            dns_entries="${dns_map[$selected_provider]}"
+            # Split the entries into an array
+            IFS=$'\n' read -r -d '' -a dns_array <<< "$dns_entries"
+            # Get the first two DNS servers
+            dns_server1="${dns_array[0]}"
+            dns_server2="${dns_array[1]}"
+            # Change the DNS server
+            change_dns_server "$dns_server1" "$dns_server2"
+            echo "DNS server changed to $dns_server1 and $dns_server2"
             ;;
         2)
             # Show available DNS servers
