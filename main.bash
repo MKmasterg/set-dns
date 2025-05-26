@@ -109,6 +109,21 @@ break_flag=0
 user_choice_task=0
 dns_choice=0
 
+# Fisrt check if there is a backup of the resolv.conf file
+if [ ! -f /etc/resolv.conf.bak ]; then
+    echo "There is no backup of the resolv.conf file."
+    read -p "Do you want to create a backup? (Y/n): " create_backup
+    create_backup=${create_backup:-y}
+    if [[ "$create_backup" =~ ^[Yy]$ ]]; then
+        echo "Creating a backup of the current resolv.conf file..."
+        cp /etc/resolv.conf /etc/resolv.conf.bak
+    else
+        echo "Backup not created. The script will continue without a backup."
+    fi
+else
+    echo "Backup of resolv.conf already exists."
+fi
+
 # Asks the user to select a choice to perform a task
 while [ $break_flag -eq 0 ]; do
     echo "Please select a task to perform:"
@@ -186,6 +201,13 @@ while [ $break_flag -eq 0 ]; do
             ;;
         5)
             # Restore default DNS server
+            echo "Restoring default DNS server..."
+            if [ -f /etc/resolv.conf.bak ]; then
+                cp /etc/resolv.conf.bak /etc/resolv.conf
+                echo "Default DNS server restored."
+            else
+                echo "No backup found. Cannot restore default DNS server."
+            fi
             ;;
         6)
             # Exit the script
