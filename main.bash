@@ -124,8 +124,11 @@ else
     echo "Backup of resolv.conf already exists."
 fi
 
-# Asks the user to select a choice to perform a task
 while [ $break_flag -eq 0 ]; do
+    echo "==================================================="
+    grep -E 'nameserver' /etc/resolv.conf
+    echo "==================================================="
+    echo "Current DNS servers:"
     echo "Please select a task to perform:"
     echo "1. Change DNS server"
     echo "2. Show available DNS servers"
