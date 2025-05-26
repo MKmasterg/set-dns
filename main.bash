@@ -82,7 +82,9 @@ add_dns_server() {
         echo
         echo "$provider:"
         echo "nameserver1=$nameserver1"
-        echo "nameserver2=$nameserver2"
+        if ! [[ -z "$nameserver2" ]]; then
+            echo "nameserver2=$nameserver2"
+        fi
     } >> "$CONFIG"
 
 }
@@ -169,16 +171,10 @@ while [ $break_flag -eq 0 ]; do
                 read -p "Please enter the first nameserver: " nameserver1
             done
             # DNS validation
-            if ! [[ -z "$nameserver2" ]] then
-                if ! [[ "$nameserver1" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || ! [[ "$nameserver2" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                echo "Invalid DNS server format. Please use the format x.x.x.x"
+            validation=1
+            validate_dns validation "$nameserver1" "$nameserver2"
+            if ! [ "$validation" -eq 1 ]; then
                 continue
-                fi
-            else
-                if ! [[ "$nameserver1" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                echo "Invalid DNS server format. Please use the format x.x.x.x"
-                continue
-                fi
             fi
             add_dns_server "$provider" "$nameserver1" "$nameserver2"
             get_dns_servers dns_map
