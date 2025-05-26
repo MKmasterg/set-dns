@@ -36,22 +36,55 @@ show_dns_servers() {
     done
 }
 
+validate_dns() {
+    local -n is_valid_ref=$1
+    local nameserver1="$2"
+    local nameserver2="$3"
+    if ! [[ -z "$nameserver2" ]]; then
+        if ! [[ "$nameserver1" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || ! [[ "$nameserver2" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "Invalid DNS server format. Please use the format x.x.x.x"
+        is_valid_ref=0
+        fi
+    else
+        if ! [[ "$nameserver1" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "Invalid DNS server format. Please use the format x.x.x.x"
+        is_valid_ref=0
+        fi
+    fi
+}
+
 change_dns_server() {
     local nameserver1="$1"
     local nameserver2="$2"
     local resolv_conf="/etc/resolv.conf"
     
     # Validate the dns servers
-    if ! [[ "$nameserver1" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || ! [[ "$nameserver2" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "Invalid DNS server format. Please use the format x.x.x.x"
-        return 1
+    local validation=1
+    validate_dns validation "$nameserver1" "$nameserver2"
+    if ! [ "$validation" -eq 1 ]; then
+    return
     fi
-
     # Write the new DNS servers to /etc/resolv.conf
     {
         echo "nameserver $nameserver1"
-        echo "nameserver $nameserver2"
+        if ! [[ -z "$nameserver2" ]]; then
+            echo "nameserver $nameserver2"
+        fi
     } >| "$resolv_conf"
+}
+
+add_dns_server() {
+    local provider="$1"
+    local nameserver1="$2"
+    local nameserver2="$3"
+
+    {
+        echo
+        echo "$provider:"
+        echo "nameserver1=$nameserver1"
+        echo "nameserver2=$nameserver2"
+    } >> "$CONFIG"
+
 }
 
 # Check if the user has privileges to change the DNS server
@@ -124,6 +157,33 @@ while [ $break_flag -eq 0 ]; do
             ;;
         3)
             # Add a new DNS server
+            provider=""
+            while [ -z "$provider" ]; do
+                read -p "Please enter the name of provider: " provider
+            done
+            read -p "Please enter the first nameserver: " nameserver1
+            read -p "Please enter the second nameserver: " nameserver2
+            # Input validation
+            while [ -z "$nameserver1" ]; do
+                echo "First nameserver cannot be empty"
+                read -p "Please enter the first nameserver: " nameserver1
+            done
+            # DNS validation
+            if ! [[ -z "$nameserver2" ]] then
+                if ! [[ "$nameserver1" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || ! [[ "$nameserver2" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "Invalid DNS server format. Please use the format x.x.x.x"
+                continue
+                fi
+            else
+                if ! [[ "$nameserver1" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "Invalid DNS server format. Please use the format x.x.x.x"
+                continue
+                fi
+            fi
+            add_dns_server "$provider" "$nameserver1" "$nameserver2"
+            get_dns_servers dns_map
+            
+            echo "Done!"
             ;;
         4)
             # Remove a DNS server
