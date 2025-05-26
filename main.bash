@@ -147,7 +147,7 @@ while [ $break_flag -eq 0 ]; do
                 continue
             fi
             # Get the selected DNS server
-            # Keys are providers, values are DNS entries so i need to get the key by iteration
+            # Keys are providers, values are DNS entries so it needs to get the key by iteration
             index=1
             for provider in "${!dns_map[@]}"; do
                 if [ "$index" -eq "$dns_choice" ]; then
@@ -198,6 +198,30 @@ while [ $break_flag -eq 0 ]; do
             ;;
         4)
             # Remove a DNS server
+            echo "Please select a DNS server to remove:"
+            show_dns_servers dns_map
+            read -p "Enter the number of the DNS server you want to remove: " dns_choice
+            # Validate the choice
+            if ! [[ "$dns_choice" =~ ^[0-9]+$ ]] || [ "$dns_choice" -lt 1 ] || [ "$dns_choice" -gt "${#dns_map[@]}" ]; then
+                echo "Invalid choice. Please try again."
+                continue
+            fi
+            # Get the selected DNS server
+            index=1
+            for provider in "${!dns_map[@]}"; do
+                if [ "$index" -eq "$dns_choice" ]; then
+                    selected_provider="$provider"
+                    break
+                fi
+                ((index++))
+            done
+            # Remove the selected DNS server from the configuration file
+            sed -i "/^$selected_provider:/,/^$/d" "$CONFIG"
+
+            unset dns_map
+            declare -A dns_map
+            get_dns_servers dns_map
+            echo "DNS server $selected_provider removed successfully."
             ;;
         5)
             # Restore default DNS server
